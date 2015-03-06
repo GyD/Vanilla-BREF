@@ -1,0 +1,3 @@
+[submodule "lib/BREFormatter"]
+	path = lib/BREFormatter
+	url = https://github.com/GyD/BREFormatter.git
