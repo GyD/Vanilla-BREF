@@ -16,7 +16,7 @@ $PluginInfo['BREF'] = array(
   'RequiredApplications' => array('Vanilla' => '2.1.8p2'),
   'RequiredTheme' => false,
   'RequiredPlugins' => false,
- # 'SettingsUrl' => 'dashboard/settings/emojify',
+    # 'SettingsUrl' => 'dashboard/settings/emojify',
   'HasLocale' => false,
   'Author' => "GyD",
   'AuthorEmail' => 'contact@gyd.be',
@@ -34,11 +34,17 @@ class BREFPlugin extends Gdn_Plugin
      */
     private $parsed = false;
 
+    private $Apc = false;
+
     /**
      * Constructor
      */
     public function __construct()
     {
+        if (function_exists('apc_fetch') && C('Garden.Apc', false)) {
+            $this->Apc = true;
+        }
+
         parent::__construct();
     }
 
@@ -153,6 +159,12 @@ class BREFPlugin extends Gdn_Plugin
             require __DIR__ . '/lib/BREFormatter/BREF.php';
 
             $formatter = new \GyD\BREFormatter\BREF();
+            if ($this->Apc) {
+                $cache = apc_fetch('BREF_parsed_urls');
+                if (!empty($cache) && is_array($cache)) {
+                    $formatter->setCache($cache);
+                }
+            }
         }
 
         return $formatter;
@@ -166,5 +178,9 @@ class BREFPlugin extends Gdn_Plugin
         Gdn::Config()->Set('Garden.Format.YouTube', 0, true, false);
         Gdn::Config()->Set('Garden.Format.Vimeo', 0, true, false);
         $body = $this->getFormatter()->format($body);
+
+        if ($this->Apc) {
+            apc_store('BREF_parsed_urls', $this->getFormatter()->getCache());
+        }
     }
 }
