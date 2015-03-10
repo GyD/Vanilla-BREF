@@ -34,7 +34,12 @@ class BREFPlugin extends Gdn_Plugin
      */
     private $parsed = false;
 
-    private $Apc = false;
+    /**
+     * Can the app use apc ?
+     *
+     * @var bool
+     */
+    private $apc = false;
 
     /**
      * Constructor
@@ -42,7 +47,7 @@ class BREFPlugin extends Gdn_Plugin
     public function __construct()
     {
         if (function_exists('apc_fetch') && C('Garden.Apc', false)) {
-            $this->Apc = true;
+            $this->apc = true;
         }
 
         parent::__construct();
@@ -145,7 +150,10 @@ class BREFPlugin extends Gdn_Plugin
      */
     public function Base_BeforeCommentPreviewFormat_Handler($Sender)
     {
-        $this->applyBREF($Sender->Comment->Body);
+        if (!$this->isParsed()) {
+            $this->applyBREF($Sender->Comment->Body);
+            $this->setParsed(true);
+        }
     }
 
     /**
@@ -159,12 +167,14 @@ class BREFPlugin extends Gdn_Plugin
             require __DIR__ . '/lib/BREFormatter/BREF.php';
 
             $formatter = new \GyD\BREFormatter\BREF();
-            if ($this->Apc) {
+            if ($this->apc) {
                 $cache = apc_fetch('BREF_parsed_urls');
                 if (!empty($cache) && is_array($cache)) {
                     $formatter->setCache($cache);
                 }
             }
+
+            $formatter->allowExternalCall(true);
         }
 
         return $formatter;
@@ -179,7 +189,7 @@ class BREFPlugin extends Gdn_Plugin
         Gdn::Config()->Set('Garden.Format.Vimeo', 0, true, false);
         $body = $this->getFormatter()->format($body);
 
-        if ($this->Apc) {
+        if ($this->apc) {
             apc_store('BREF_parsed_urls', $this->getFormatter()->getCache());
         }
     }
